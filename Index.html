@@ -151,24 +151,36 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
         }
-        .video-item, .movie-item {
+        .item {
             position: relative;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
             background-color: #222;
-            box-shadow: 0 4px 10px rgba(0, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.2);
+            aspect-ratio: 16 / 9;
         }
-        .video-item iframe, .movie-item iframe {
+        .item iframe {
             width: 100%;
-            height: 200px;
+            height: 100%;
             border: none;
+        }
+        .title {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
         }
         .delete-btn {
             position: absolute;
-            bottom: 8px;
+            top: 8px;
             right: 8px;
             padding: 6px 12px;
             background-color: red;
@@ -177,6 +189,7 @@
             border-radius: 12px;
             cursor: pointer;
             font-size: 12px;
+            z-index: 1;
         }
         #add-video-btn {
             position: fixed;
@@ -241,6 +254,11 @@
             font-size: 16px;
             margin-top: 20px;
         }
+        #privacy-status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #aaa;
+        }
         #privacy-overlay {
             position: fixed;
             top: 0;
@@ -255,29 +273,6 @@
             font-size: 28px;
             z-index: 999;
         }
-        #owner-panel {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.95);
-            display: none;
-            flex-direction: column;
-            padding: 20px;
-            z-index: 1001;
-            overflow-y: auto;
-        }
-        .user-item button {
-            padding: 6px 12px;
-            margin: 5px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        .ban-btn { background: red; color: white; }
-        .kick-btn { background: orange; color: white; }
-        .timeout-btn { background: yellow; color: black; }
     </style>
 </head>
 <body>
@@ -310,18 +305,13 @@
     <div id="settings-modal">
         <div id="settings-content">
             <h2>Settings</h2>
-            <button id="privacy-toggle">Enable Block Light. Speed (Privacy Mode)</button>
-            <button onclick="document.getElementById('settings-modal').style.display='none'" style="margin-top:20px;padding:12px;background:#333;color:#fff;border:none;border-radius:25px;">Close</button>
+            <button id="privacy-toggle">Enable Privacy Mode (Black Screen)</button>
+            <div id="privacy-status">Privacy Mode: OFF</div>
+            <button onclick="document.getElementById('settings-modal').style.display='none'" style="margin-top:30px;padding:12px;background:#333;color:#fff;border:none;border-radius:25px;">Close</button>
         </div>
     </div>
 
-    <div id="privacy-overlay">Privacy Mode Active - Screen Hidden</div>
-
-    <div id="owner-panel">
-        <h2>Owner Panel</h2>
-        <div id="user-list" style="display:flex;flex-direction:column;gap:15px;"></div>
-        <button onclick="document.getElementById('owner-panel').style.display='none'" style="margin-top:20px;padding:12px;background:#00ffff;color:#000;border:none;border-radius:25px;">Close</button>
-    </div>
+    <div id="privacy-overlay">Privacy Mode ON - Screen Hidden</div>
 
     <script>
         const API_KEY = "AIzaSyA-By6l0sAAIvVsr7OaZj9bA-16Vb0XeeI";
@@ -335,9 +325,8 @@
         const settingsModal = document.getElementById('settings-modal');
         const privacyToggle = document.getElementById('privacy-toggle');
         const privacyOverlay = document.getElementById('privacy-overlay');
+        const privacyStatus = document.getElementById('privacy-status');
         const addVideoBtn = document.getElementById('add-video-btn');
-        const ownerPanel = document.getElementById('owner-panel');
-        const userList = document.getElementById('user-list');
 
         const systemInstruction = { parts: [{ text: "You are a helpful AI assistant specialized in math and history. Provide clear, accurate explanations. Show steps for math and key facts for history." }] };
         let history = [];
@@ -348,6 +337,8 @@
             { title: "The Grinch (Cartoon)", url: "https://vidnest.fun/movie/360920?color=B20710&colour=B20710&autoPlay=true&primarycolor=B20710&autoNext=true&nextButton=true&poster=true&autoplayNextEpisode=true&nextEpisode=true&adFree=true" },
             { title: "Zootopia 2", url: "https://vidnest.fun/movie/1084242?color=B20710&colour=B20710&autoPlay=true&primarycolor=B20710&autoNext=true&nextButton=true&poster=true&autoplayNextEpisode=true&nextEpisode=true&adFree=true" }
         ];
+
+        let privacyActive = false; // Starts OFF
 
         function addMessage(text, sender) {
             const msg = document.createElement('div');
@@ -396,7 +387,6 @@
             }
         }
 
-        // Tabs
         document.querySelectorAll('.tab').forEach(tab => {
             tab.onclick = () => {
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -410,15 +400,32 @@
             };
         });
 
+        function getEmbedSrc(link) {
+            let src = link.trim();
+            if (src.includes('youtube.com') || src.includes('youtu.be')) {
+                let videoId = '';
+                if (src.includes('youtu.be/')) videoId = src.split('youtu.be/')[1].split('?')[0];
+                else videoId = new URLSearchParams(src.split('?')[1] || '').get('v') || src.match(/embed\/([a-zA-Z0-9_-]+)/)?.[1];
+                if (videoId) src = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`;
+            } else if (src.includes('tiktok.com')) {
+                const videoId = src.match(/\/video\/(\d+)/)?.[1];
+                if (videoId) src = `https://www.tiktok.com/embed/v2/${videoId}`;
+            }
+            return src;
+        }
+
         function renderVideos() {
             const container = document.getElementById('videos-tab');
-            container.innerHTML = '<div class="grid" id="video-grid"></div>';
-            const grid = document.getElementById('video-grid');
+            container.innerHTML = '<div class="grid"></div>';
+            const grid = container.querySelector('.grid');
             videos.forEach((link, i) => {
                 const item = document.createElement('div');
-                item.classList.add('video-item');
-                item.innerHTML = `<iframe src="${link}" allowfullscreen></iframe>
-                                  <button class="delete-btn" onclick="deleteVideo(${i})">Delete</button>`;
+                item.classList.add('item');
+                const embedSrc = getEmbedSrc(link);
+                item.innerHTML = `
+                    <iframe src="${embedSrc}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                    <button class="delete-btn" onclick="deleteVideo(${i})">Delete</button>
+                `;
                 grid.appendChild(item);
             });
         }
@@ -435,60 +442,37 @@
             const grid = container.querySelector('.grid');
             defaultMovies.forEach(movie => {
                 const item = document.createElement('div');
-                item.classList.add('movie-item');
-                item.innerHTML = `<div style="background:#333;padding:10px;text-align:center;font-weight:bold;">${movie.title}</div>
-                                  <iframe src="${movie.url}" allowfullscreen></iframe>`;
+                item.classList.add('item');
+                item.innerHTML = `
+                    <div class="title">${movie.title}</div>
+                    <iframe src="${movie.url}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+                `;
                 grid.appendChild(item);
             });
         }
 
-        // Settings
         settingsBtn.onclick = () => { settingsModal.style.display = 'flex'; };
-        let privacyActive = false;
+
         privacyToggle.onclick = () => {
             privacyActive = !privacyActive;
             privacyOverlay.style.display = privacyActive ? 'flex' : 'none';
-            privacyToggle.textContent = privacyActive ? 'Disable Privacy Mode' : 'Enable Block Light. Speed (Privacy Mode)';
+            privacyToggle.textContent = privacyActive ? 'Disable Privacy Mode' : 'Enable Privacy Mode (Black Screen)';
+            privacyStatus.textContent = `Privacy Mode: ${privacyActive ? 'ON' : 'OFF'}`;
         };
 
-        // Add video
         addVideoBtn.onclick = () => {
             const link = prompt('Enter YouTube, TikTok, or any video link:');
-            if (link && (link.includes('youtube') || link.includes('tiktok') || link.includes('vidnest'))) {
+            if (link) {
                 videos.push(link);
                 localStorage.setItem('customVideos', JSON.stringify(videos));
                 if (document.querySelector('[data-tab="videos"]').classList.contains('active')) renderVideos();
-            } else if (link) {
-                alert('Please enter a valid video link.');
             }
         };
-
-        // Owner panel (hold screen or press Q)
-        let touchStart;
-        document.body.addEventListener('touchstart', () => touchStart = Date.now());
-        document.body.addEventListener('touchend', () => {
-            if (Date.now() - touchStart > 1000) showOwnerPanel();
-        });
-        document.addEventListener('keydown', e => { if (e.key.toLowerCase() === 'q') showOwnerPanel(); });
-
-        function showOwnerPanel() {
-            userList.innerHTML = '';
-            ['You (Owner)', 'Guest1', 'Guest2', 'Guest3'].forEach((user, i) => {
-                if (user.includes('Owner')) return;
-                const div = document.createElement('div');
-                div.innerHTML = `<strong>${user}</strong>
-                                 <button class="ban-btn">Ban</button>
-                                 <button class="kick-btn">Kick</button>
-                                 <button class="timeout-btn">Timeout</button>`;
-                userList.appendChild(div);
-            });
-            ownerPanel.style.display = 'flex';
-        }
 
         sendBtn.onclick = sendMessage;
         userInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
 
-        renderMovies(); // Initial load
+        renderMovies();
     </script>
 </body>
 </html>
