@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math & History AI Helper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #chat-container {
+            width: 100%;
+            height: 100vh;
+            background-color: #111;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #header {
+            background-color: #222;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        #profile-bg {
+            background: radial-gradient(circle, #00ffff, #000);
+            opacity: 0.3;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        #header-title {
+            position: relative;
+            z-index: 1;
+        }
+        #settings-btn {
+            padding: 8px 15px;
+            background-color: #00ffff;
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            z-index: 1;
+        }
+        #content-area {
+            flex: 1;
+            overflow: hidden;
+        }
+        #ai-chat {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        #messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.4;
+            position: relative;
+        }
+        .user {
+            align-self: flex-end;
+            background-color: #00ffff;
+            color: #000;
+        }
+        .ai {
+            align-self: flex-start;
+            background-color: #333;
+        }
+        .copy-btn {
+            position: absolute;
+            bottom: -30px;
+            right: 10px;
+            padding: 6px 12px;
+            background-color: #00ffff;
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        #input-area {
+            display: flex;
+            padding: 12px;
+            background-color: #222;
+            border-top: 1px solid #333;
+        }
+        #user-input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 25px;
+            background-color: #333;
+            color: #fff;
+            font-size: 16px;
+        }
+        #send-btn {
+            margin-left: 10px;
+            padding: 12px 24px;
+            background-color: #00ffff;
+            color: #000;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #tab-bar {
+            display: flex;
+            background-color: #222;
+        }
+        .tab {
+            flex: 1;
+            padding: 14px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .tab.active {
+            background-color: #00ffff;
+            color: #000;
+        }
+        #videos-tab, #movies-tab {
+            height: 100%;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #000;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+        }
+        .video-item, .movie-item {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #222;
+            box-shadow: 0 4px 10px rgba(0, 255, 255, 0.1);
+        }
+        .video-item iframe, .movie-item iframe {
+            width: 100%;
+            height: 200px;
+            border: none;
+        }
+        .delete-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            padding: 6px 12px;
+            background-color: red;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        #add-video-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            padding: 15px;
+            background-color: #00ffff;
+            color: #000;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 255, 255, 0.5);
+            z-index: 10;
+        }
+        #intro {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 18px;
+            animation: fadeOut 3s forwards;
+            z-index: 100;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        #settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #settings-content {
+            background-color: #222;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 80%;
+            max-width: 400px;
+        }
+        #privacy-toggle {
+            padding: 12px 24px;
+            background-color: #00ffff;
+            color: #000;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        #privacy-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 28px;
+            z-index: 999;
+        }
+        #owner-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+            z-index: 1001;
+            overflow-y: auto;
+        }
+        .user-item button {
+            padding: 6px 12px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .ban-btn { background: red; color: white; }
+        .kick-btn { background: orange; color: white; }
+        .timeout-btn { background: yellow; color: black; }
+    </style>
+</head>
+<body>
+    <div id="intro">Made by Julian</div>
+    <div id="chat-container">
+        <div id="header">
+            <div id="profile-bg"></div>
+            <div id="header-title">Math & History AI Helper</div>
+            <button id="settings-btn">Settings</button>
+        </div>
+        <div id="content-area">
+            <div id="ai-chat">
+                <div id="messages"></div>
+                <div id="input-area">
+                    <input type="text" id="user-input" placeholder="Ask about math or history..." />
+                    <button id="send-btn">Send</button>
+                </div>
+            </div>
+            <div id="videos-tab" style="display:none;"></div>
+            <div id="movies-tab" style="display:none;"></div>
+        </div>
+        <div id="tab-bar">
+            <div class="tab active" data-tab="ai">AI</div>
+            <div class="tab" data-tab="videos">Videos</div>
+            <div class="tab" data-tab="movies">Movies</div>
+        </div>
+        <button id="add-video-btn">+</button>
+    </div>
+
+    <div id="settings-modal">
+        <div id="settings-content">
+            <h2>Settings</h2>
+            <button id="privacy-toggle">Enable Block Light. Speed (Privacy Mode)</button>
+            <button onclick="document.getElementById('settings-modal').style.display='none'" style="margin-top:20px;padding:12px;background:#333;color:#fff;border:none;border-radius:25px;">Close</button>
+        </div>
+    </div>
+
+    <div id="privacy-overlay">Privacy Mode Active - Screen Hidden</div>
+
+    <div id="owner-panel">
+        <h2>Owner Panel</h2>
+        <div id="user-list" style="display:flex;flex-direction:column;gap:15px;"></div>
+        <button onclick="document.getElementById('owner-panel').style.display='none'" style="margin-top:20px;padding:12px;background:#00ffff;color:#000;border:none;border-radius:25px;">Close</button>
+    </div>
+
+    <script>
+        const API_KEY = "AIzaSyA-By6l0sAAIvVsr7OaZj9bA-16Vb0XeeI";
+        const MODEL = "gemini-2.5-flash";
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+
+        const messagesDiv = document.getElementById('messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const privacyToggle = document.getElementById('privacy-toggle');
+        const privacyOverlay = document.getElementById('privacy-overlay');
+        const addVideoBtn = document.getElementById('add-video-btn');
+        const ownerPanel = document.getElementById('owner-panel');
+        const userList = document.getElementById('user-list');
+
+        const systemInstruction = { parts: [{ text: "You are a helpful AI assistant specialized in math and history. Provide clear, accurate explanations. Show steps for math and key facts for history." }] };
+        let history = [];
+        let videos = JSON.parse(localStorage.getItem('customVideos')) || [];
+
+        const defaultMovies = [
+            { title: "Freddy", url: "https://vidnest.fun/movie/1228246?color=B20710&colour=B20710&autoPlay=true&primarycolor=B20710&autoNext=true&nextButton=true&poster=true&autoplayNextEpisode=true&nextEpisode=true&adFree=true" },
+            { title: "The Grinch (Cartoon)", url: "https://vidnest.fun/movie/360920?color=B20710&colour=B20710&autoPlay=true&primarycolor=B20710&autoNext=true&nextButton=true&poster=true&autoplayNextEpisode=true&nextEpisode=true&adFree=true" },
+            { title: "Zootopia 2", url: "https://vidnest.fun/movie/1084242?color=B20710&colour=B20710&autoPlay=true&primarycolor=B20710&autoNext=true&nextButton=true&poster=true&autoplayNextEpisode=true&nextEpisode=true&adFree=true" }
+        ];
+
+        function addMessage(text, sender) {
+            const msg = document.createElement('div');
+            msg.classList.add('message', sender);
+            msg.textContent = text;
+            messagesDiv.appendChild(msg);
+
+            if (sender === 'ai') {
+                const copyBtn = document.createElement('button');
+                copyBtn.classList.add('copy-btn');
+                copyBtn.textContent = 'Copy';
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(text);
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+                };
+                msg.appendChild(copyBtn);
+            }
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const query = userInput.value.trim();
+            if (!query) return;
+            addMessage(query, 'user');
+            userInput.value = '';
+
+            const currentContents = [...history, { parts: [{ text: query }] }];
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ system_instruction: systemInstruction, contents: currentContents })
+                });
+
+                if (!response.ok) throw new Error(`Error ${response.status}`);
+
+                const data = await response.json();
+                const aiText = data.candidates[0].content.parts[0].text || "No response.";
+                addMessage(aiText, 'ai');
+
+                history.push({ role: "user", parts: [{ text: query }] }, { role: "model", parts: [{ text: aiText }] });
+            } catch (error) {
+                addMessage(`Error: ${error.message} (try again later)`, 'ai');
+            }
+        }
+
+        // Tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.onclick = () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const target = tab.getAttribute('data-tab');
+                document.getElementById('ai-chat').style.display = target === 'ai' ? 'flex' : 'none';
+                document.getElementById('videos-tab').style.display = target === 'videos' ? 'block' : 'none';
+                document.getElementById('movies-tab').style.display = target === 'movies' ? 'block' : 'none';
+                if (target === 'videos') renderVideos();
+                if (target === 'movies') renderMovies();
+            };
+        });
+
+        function renderVideos() {
+            const container = document.getElementById('videos-tab');
+            container.innerHTML = '<div class="grid" id="video-grid"></div>';
+            const grid = document.getElementById('video-grid');
+            videos.forEach((link, i) => {
+                const item = document.createElement('div');
+                item.classList.add('video-item');
+                item.innerHTML = `<iframe src="${link}" allowfullscreen></iframe>
+                                  <button class="delete-btn" onclick="deleteVideo(${i})">Delete</button>`;
+                grid.appendChild(item);
+            });
+        }
+
+        function deleteVideo(index) {
+            videos.splice(index, 1);
+            localStorage.setItem('customVideos', JSON.stringify(videos));
+            renderVideos();
+        }
+
+        function renderMovies() {
+            const container = document.getElementById('movies-tab');
+            container.innerHTML = '<div class="grid"></div>';
+            const grid = container.querySelector('.grid');
+            defaultMovies.forEach(movie => {
+                const item = document.createElement('div');
+                item.classList.add('movie-item');
+                item.innerHTML = `<div style="background:#333;padding:10px;text-align:center;font-weight:bold;">${movie.title}</div>
+                                  <iframe src="${movie.url}" allowfullscreen></iframe>`;
+                grid.appendChild(item);
+            });
+        }
+
+        // Settings
+        settingsBtn.onclick = () => { settingsModal.style.display = 'flex'; };
+        let privacyActive = false;
+        privacyToggle.onclick = () => {
+            privacyActive = !privacyActive;
+            privacyOverlay.style.display = privacyActive ? 'flex' : 'none';
+            privacyToggle.textContent = privacyActive ? 'Disable Privacy Mode' : 'Enable Block Light. Speed (Privacy Mode)';
+        };
+
+        // Add video
+        addVideoBtn.onclick = () => {
+            const link = prompt('Enter YouTube, TikTok, or any video link:');
+            if (link && (link.includes('youtube') || link.includes('tiktok') || link.includes('vidnest'))) {
+                videos.push(link);
+                localStorage.setItem('customVideos', JSON.stringify(videos));
+                if (document.querySelector('[data-tab="videos"]').classList.contains('active')) renderVideos();
+            } else if (link) {
+                alert('Please enter a valid video link.');
+            }
+        };
+
+        // Owner panel (hold screen or press Q)
+        let touchStart;
+        document.body.addEventListener('touchstart', () => touchStart = Date.now());
+        document.body.addEventListener('touchend', () => {
+            if (Date.now() - touchStart > 1000) showOwnerPanel();
+        });
+        document.addEventListener('keydown', e => { if (e.key.toLowerCase() === 'q') showOwnerPanel(); });
+
+        function showOwnerPanel() {
+            userList.innerHTML = '';
+            ['You (Owner)', 'Guest1', 'Guest2', 'Guest3'].forEach((user, i) => {
+                if (user.includes('Owner')) return;
+                const div = document.createElement('div');
+                div.innerHTML = `<strong>${user}</strong>
+                                 <button class="ban-btn">Ban</button>
+                                 <button class="kick-btn">Kick</button>
+                                 <button class="timeout-btn">Timeout</button>`;
+                userList.appendChild(div);
+            });
+            ownerPanel.style.display = 'flex';
+        }
+
+        sendBtn.onclick = sendMessage;
+        userInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+
+        renderMovies(); // Initial load
+    </script>
+</body>
+</html>
